@@ -131,19 +131,6 @@ resource "aws_security_group" "rds" {
   tags = { Name = "todo-rds-sg" }
 }
 
-# --- ECR ---
-
-resource "aws_ecr_repository" "todo_app" {
-  name                 = "todo-app"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = false
-  }
-
-  tags = { Name = "todo-app-ecr" }
-}
-
 # --- EC2 ---
 
 data "aws_ami" "amazon_linux" {
