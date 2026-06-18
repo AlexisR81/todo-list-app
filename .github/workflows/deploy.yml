@@ -43,27 +43,36 @@ jobs:
     steps:
       - name: Déployer via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          IMAGE_URI: ${{ needs.build-and-push.outputs.image_uri }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          envs: IMAGE_URI,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,DB_HOST,DB_USER,DB_PASSWORD,DB_NAME
           script: |
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
-              --username "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            echo "$DOCKERHUB_TOKEN" | docker login \
+              --username "$DOCKERHUB_USERNAME" --password-stdin
 
             docker stop todo-app 2>/dev/null || true
             docker rm   todo-app 2>/dev/null || true
 
-            docker pull ${{ needs.build-and-push.outputs.image_uri }}
+            docker pull "$IMAGE_URI"
 
             docker run -d \
               --name todo-app \
               --restart unless-stopped \
-              -p ${{ env.APP_PORT }}:${{ env.APP_PORT }} \
-              -e MYSQL_HOST="${{ secrets.DB_HOST }}" \
-              -e MYSQL_USER="${{ secrets.DB_USER }}" \
-              -e MYSQL_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-              -e MYSQL_DB="${{ secrets.DB_NAME }}" \
-              ${{ needs.build-and-push.outputs.image_uri }}
+              -p 3000:3000 \
+              -e MYSQL_HOST="$DB_HOST" \
+              -e MYSQL_USER="$DB_USER" \
+              -e MYSQL_PASSWORD="$DB_PASSWORD" \
+              -e MYSQL_DB="$DB_NAME" \
+              "$IMAGE_URI"
 
             docker image prune -f
